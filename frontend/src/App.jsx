@@ -476,7 +476,7 @@ function App() {
     setLoadingBalances(true);
     try {
       showToast("Requesting testnet XLM from Friendbot...", "info");
-      const res = await fetch(`https://friendbot.stellar.org?addr=${publicKey}`);
+      const res = await fetch(`http://localhost:3001/api/friendbot?addr=${publicKey}`);
       if (!res.ok) throw new Error("Friendbot request failed");
       showToast("XLM successfully requested! Refreshing balances...", "success");
       loadWalletBalances(publicKey);
@@ -497,7 +497,7 @@ function App() {
     setLoadingBalances(true);
     try {
       showToast("Requesting XLM from Friendbot...", "info");
-      const res = await fetch(`https://friendbot.stellar.org?addr=${target}`);
+      const res = await fetch(`http://localhost:3001/api/friendbot?addr=${target}`);
       if (!res.ok) throw new Error("Friendbot request failed");
       showToast("Friendbot funded account. Establishing USDC trustline...", "info");
       

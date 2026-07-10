@@ -372,6 +372,27 @@ app.post('/api/confirm-withdrawal-sent', async (req, res) => {
   }
 });
 
+// Proxy for Stellar Friendbot requests to bypass CORS rules
+app.get('/api/friendbot', async (req, res) => {
+  const { addr } = req.query;
+  if (!addr) {
+    return res.status(400).json({ error: "Address query parameter is required" });
+  }
+  try {
+    console.log(`[Friendbot Proxy] Requesting funding for ${addr}...`);
+    const response = await fetch(`https://friendbot.stellar.org?addr=${addr}`);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Friendbot responded with status ${response.status}`);
+    }
+    const data = await response.json();
+    res.json({ success: true, details: data });
+  } catch (error) {
+    console.error(`[Friendbot Proxy Error]`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Feedback and Analytics JSON Database configuration
 const feedbackFilePath = path.join(__dirname, 'feedback.json');
 const analyticsFilePath = path.join(__dirname, 'analytics.json');
