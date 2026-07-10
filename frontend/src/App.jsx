@@ -470,6 +470,25 @@ function App() {
     await fundMockWallet(pub);
   };
 
+  // Request XLM from Friendbot directly to Freighter wallet (Friction reduction)
+  const fundFreighterWithFriendbot = async () => {
+    if (!publicKey) return;
+    setLoadingBalances(true);
+    try {
+      showToast("Requesting testnet XLM from Friendbot...", "info");
+      const res = await fetch(`https://friendbot.stellar.org?addr=${publicKey}`);
+      if (!res.ok) throw new Error("Friendbot request failed");
+      showToast("XLM successfully requested! Refreshing balances...", "success");
+      loadWalletBalances(publicKey);
+    } catch (err) {
+      console.error("Friendbot funding failed:", err);
+      showToast(`Funding failed: ${err.message}`, "error");
+      trackEvent('error', { context: 'fundFreighterWithFriendbot', message: err.message });
+    } finally {
+      setLoadingBalances(false);
+    }
+  };
+
   // Fund local wallet with Friendbot and establish USDC trustline
   const fundMockWallet = async (addressToFund) => {
     const target = addressToFund || publicKey;
@@ -927,16 +946,20 @@ function App() {
       ) : (
         <>
           {/* Unfunded Wallet Warning */}
-          {walletType === 'mock' && parseFloat(xlmBalance) === 0 && (
+          {walletType !== 'none' && parseFloat(xlmBalance) === 0 && (
             <div className="banner warning">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <AlertTriangle size={20} />
                 <span>
-                  This locally generated mock wallet has no balance on Stellar Testnet yet. Fund it to create the account.
+                  Your connected wallet has no balance on Stellar Testnet yet. Fund it to activate the account.
                 </span>
               </div>
-              <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px', minHeight: '44px' }} onClick={() => fundMockWallet(publicKey)}>
-                Fund Wallet
+              <button 
+                className="btn-secondary" 
+                style={{ padding: '6px 12px', fontSize: '12px', minHeight: '44px' }} 
+                onClick={walletType === 'mock' ? () => fundMockWallet(publicKey) : fundFreighterWithFriendbot}
+              >
+                Fund Wallet with Friendbot
               </button>
             </div>
           )}
