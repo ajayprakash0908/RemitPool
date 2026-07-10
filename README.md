@@ -195,7 +195,7 @@ Below are verified transactions on the Stellar Testnet:
 
 ## Demo Video
 
-* **Video Link**: [`Walkthrough Video Link`](https://youtu.be/XOdtAE0fYJ8)
+* **Video Link**: [Walkthrough Video Link](https://youtu.be/XOdtAE0fYJ8)
 * **Description**: A 1-2 minute walkthrough demonstrating onboarding, Freighter wallet connection, interactive SEP-24 USD on-ramp, split-slider remittance send, recipient search with live yield ticks, and admin metrics dashboard.
 
 ---
