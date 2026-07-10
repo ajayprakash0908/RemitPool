@@ -1,0 +1,82 @@
+name: RemitPool Continuous Integration
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  contracts:
+    name: Rust Soroban Contracts CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust Dependencies
+        uses: swatinem/rust-cache@v2
+
+      - name: Install Soroban CLI
+        run: |
+          cargo install --locked soroban-cli --features opt || true
+
+      - name: Build Contracts
+        run: cargo build --target wasm32-unknown-unknown --release
+
+      - name: Run Contract Tests
+        run: cargo test
+
+  frontend:
+    name: Frontend React Web CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-node: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run ESLint / Linter
+        run: npm run lint || true
+        working-directory: frontend
+
+      - name: Run Component Tests
+        run: npm run test
+        working-directory: frontend
+
+      - name: Compile Production Build
+        run: npm run build
+        working-directory: frontend
+
+  anchor:
+    name: Mock Anchor Server CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: anchor-mock/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: anchor-mock
