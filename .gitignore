@@ -1,0 +1,16 @@
+# Dependency directories
+node_modules/
+frontend/node_modules/
+anchor-mock/node_modules/
+
+# Build outputs
+target/
+frontend/dist/
+
+# Configuration and secrets
+.env
+
+# Local logs and databases
+deploy_output.txt
+anchor-mock/feedback.json
+anchor-mock/analytics.json
