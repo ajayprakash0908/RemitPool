@@ -404,9 +404,17 @@ function App() {
         networkPassphrase: networkPassphrase
       });
       
+      if (!signedXdr) {
+        throw new Error("Freighter transaction signature was rejected or returned empty. Please ensure your Freighter extension is unlocked and set to the Test Network.");
+      }
+      
       let envelopeXdr = signedXdr;
-      if (signedXdr && typeof signedXdr === 'object') {
+      if (typeof signedXdr === 'object') {
         envelopeXdr = signedXdr.xdr || signedXdr.signedTx || signedXdr.transactionEnvelope || signedXdr.envelope;
+      }
+      
+      if (!envelopeXdr) {
+        throw new Error("Could not extract signed XDR from Freighter response.");
       }
       
       tx = StellarSdk.TransactionBuilder.fromXDR(envelopeXdr, networkPassphrase);
@@ -584,9 +592,17 @@ function App() {
         networkPassphrase: networkPassphrase
       });
       
+      if (!signedXdr) {
+        throw new Error("Freighter transaction signature was rejected or returned empty. Please ensure your Freighter extension is unlocked and set to the Test Network.");
+      }
+      
       let envelopeXdr = signedXdr;
-      if (signedXdr && typeof signedXdr === 'object') {
+      if (typeof signedXdr === 'object') {
         envelopeXdr = signedXdr.xdr || signedXdr.signedTx || signedXdr.transactionEnvelope || signedXdr.envelope;
+      }
+      
+      if (!envelopeXdr) {
+        throw new Error("Could not extract signed XDR from Freighter response.");
       }
       
       showToast("Submitting trustline to ledger...", "info");
