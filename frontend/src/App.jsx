@@ -501,8 +501,9 @@ function App() {
       if (!res.ok) throw new Error("Friendbot request failed");
       showToast("Friendbot funded account. Establishing USDC trustline...", "info");
       
-      // Execute changeTrust operation on-chain
-      const accountResult = await rpcServer.getAccount(target);
+      // Execute changeTrust operation on-chain using Horizon
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const accountResult = await server.loadAccount(target);
       const usdcAsset = new StellarSdk.Asset(config.asset_code, config.asset_issuer);
       
       const op = StellarSdk.Operation.changeTrust({
@@ -510,7 +511,7 @@ function App() {
         limit: '100000000'
       });
       
-      let tx = new StellarSdk.TransactionBuilder(accountResult, {
+      const tx = new StellarSdk.TransactionBuilder(accountResult, {
         fee: '100',
         networkPassphrase: networkPassphrase
       })
@@ -518,21 +519,15 @@ function App() {
         .setTimeout(30)
         .build();
         
-      tx = await rpcServer.prepareTransaction(tx);
-      const kp = StellarSdk.Keypair.fromSecret(secretKey);
+      const secret = localStorage.getItem('remitpool_mock_secret');
+      const kp = StellarSdk.Keypair.fromSecret(secret);
       tx.sign(kp);
       
-      const response = await rpcServer.sendTransaction(tx);
-      let status = response.status;
-      while (status === 'PENDING') {
-        await new Promise(r => setTimeout(r, 2000));
-        const txStatus = await rpcServer.getTransaction(response.hash);
-        status = txStatus.status;
-        if (status === 'SUCCESS') break;
-      }
+      await server.submitTransaction(tx);
       
       showToast("USDC Trustline established! Ready for interactive deposits.", "success");
       trackEvent('trustline_created', { wallet_type: 'mock', address: target });
+      setHasTrustline(true);
       loadWalletBalances(target);
     } catch (err) {
       console.error("Mock funding failed:", err);
@@ -548,16 +543,36 @@ function App() {
     if (!publicKey || !config) return;
     setLoadingBalances(true);
     try {
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const account = await server.loadAccount(publicKey);
       const usdcAsset = new StellarSdk.Asset(config.asset_code, config.asset_issuer);
+      
       const op = StellarSdk.Operation.changeTrust({
         asset: usdcAsset,
         limit: '100000000'
       });
       
+      const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: '100',
+        networkPassphrase: networkPassphrase
+      })
+        .addOperation(op)
+        .setTimeout(30)
+        .build();
+        
       showToast("Please approve the trustline transaction in Freighter...", "info");
-      const hash = await executeContractTransaction(op);
+      
+      // Sign with Freighter directly using the freighter API
+      const signedXdr = await freighter.signTransaction(tx.toXDR(), {
+        network: networkPassphrase === StellarSdk.Networks.PUBLIC ? 'PUBLIC' : 'TESTNET',
+        networkPassphrase: networkPassphrase
+      });
+      
+      showToast("Submitting trustline to ledger...", "info");
+      const result = await server.submitTransaction(new StellarSdk.Transaction(signedXdr, networkPassphrase));
       showToast("USDC Trustline established!", "success");
-      trackEvent('trustline_created', { wallet_type: 'freighter', address: publicKey, hash });
+      trackEvent('trustline_created', { wallet_type: 'freighter', address: publicKey, hash: result.hash });
+      setHasTrustline(true);
       
       // Update balances
       loadWalletBalances(publicKey);
