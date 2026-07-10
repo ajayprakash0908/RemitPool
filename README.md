@@ -180,11 +180,11 @@ Below are verified transactions on the Stellar Testnet:
 ## Screenshots
 
 ### 1. Main Product User Interface
-![Main Product UI Dashboard](<FILL_IN: absolute path to dashboard screenshot>)
+![Main Product UI Dashboard](image.png)
 *The RemitPool split payment slider and real-time yield query dashboard.*
 
 ### 2. Mobile Responsive View
-![Mobile Layout Stacking](<FILL_IN: absolute path to mobile screenshot>)
+![Mobile Layout Stacking](image-1.png)
 *Mobile layout stacking on 375px screens with 44px tap targets.*
 
 ### 3. Analytics & Telemetry Dashboard
