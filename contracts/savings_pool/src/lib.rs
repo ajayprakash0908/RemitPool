@@ -101,7 +101,9 @@ impl SavingsPoolContract {
     }
 
     pub fn deposit(env: Env, funding_account: Address, owner: Address, amount: i128) {
-        funding_account.require_auth();
+        if funding_account != env.current_contract_address() {
+            funding_account.require_auth();
+        }
         if amount <= 0 {
             panic!("amount must be positive");
         }
@@ -135,9 +137,11 @@ impl SavingsPoolContract {
         env.storage().instance().set(&DataKey::TotalValue, &new_total_value);
 
         // Perform the transfer from funding_account to the pool
-        let token_addr = get_token(&env);
-        let token_client = soroban_sdk::token::Client::new(&env, &token_addr);
-        token_client.transfer(&funding_account, &env.current_contract_address(), &amount);
+        if funding_account != env.current_contract_address() {
+            let token_addr = get_token(&env);
+            let token_client = soroban_sdk::token::Client::new(&env, &token_addr);
+            token_client.transfer(&funding_account, &env.current_contract_address(), &amount);
+        }
 
         // Emit pool deposit event
         env.events().publish(
