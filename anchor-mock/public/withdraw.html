@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RemitPool Anchor — Interactive Withdrawal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #2563eb;
+      --accent-glow: rgba(37, 99, 235, 0.4);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 40%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--warning));
+      border-radius: 8px;
+    }
+
+    .logo-text {
+      font-weight: 700;
+      font-size: 1.25rem;
+      background: linear-gradient(to right, #ffffff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    input, select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-value {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    button {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    /* Instruction Screen */
+    .instruction-container {
+      display: none;
+      animation: fadeIn 0.6s ease forwards;
+    }
+
+    .instruction-box {
+      background: rgba(245, 158, 11, 0.05);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .address-field {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      word-break: break-all;
+      margin-top: 8px;
+      position: relative;
+    }
+
+    .memo-badge {
+      display: inline-block;
+      background: var(--warning);
+      color: var(--bg);
+      font-weight: 700;
+      font-family: monospace;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    .loader {
+      display: none;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div id="interactiveForm">
+        <div class="logo">
+          <div class="logo-icon"></div>
+          <span class="logo-text">RemitPool Anchor</span>
+        </div>
+        <h2>Interactive KYC & Withdraw</h2>
+        <p class="subtitle">Mock anchor fiat off-ramp (Testnet simulation)</p>
+        
+        <div class="info-row">
+          <div>
+            <div class="info-label">Stellar Wallet</div>
+            <div class="info-value" id="walletLabel" style="font-size: 0.75rem;">...</div>
+          </div>
+          <div>
+            <div class="info-label">Asset</div>
+            <div class="info-value" id="assetLabel">USDC</div>
+          </div>
+        </div>
+
+        <form id="withdrawForm">
+          <div class="form-group">
+            <label for="fullName">Full Legal Name</label>
+            <input type="text" id="fullName" placeholder="Jane Doe" required>
+          </div>
+
+          <div class="form-group">
+            <label for="payoutType">Off-Ramp Payout Method</label>
+            <select id="payoutType">
+              <option value="bank">Local Bank Transfer</option>
+              <option value="mobile_money">Mobile Money (M-Pesa / MTN)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="payoutDetails">Account Number / Phone Number</label>
+            <input type="text" id="payoutDetails" placeholder="e.g. +254 712 345678 or IBAN" required>
+          </div>
+
+          <div class="form-group">
+            <label for="withdrawAmount">Withdraw Amount (USDC)</label>
+            <input type="number" id="withdrawAmount" min="1" step="any" placeholder="100.00" required>
+          </div>
+
+          <button type="submit" id="btnSubmit">
+            <span id="btnText">Confirm Payout Details</span>
+            <div class="loader" id="submitLoader"></div>
+          </button>
+        </form>
+      </div>
+
+      <div class="instruction-container" id="instructionScreen">
+        <div class="logo">
+          <div class="logo-icon" style="background: linear-gradient(135deg, var(--warning), #ea580c);"></div>
+          <span class="logo-text">RemitPool Anchor</span>
+        </div>
+        <h2>Transfer Required</h2>
+        <p class="subtitle">Please authorize and send the token transfer from your wallet to complete the withdrawal.</p>
+        
+        <div class="instruction-box">
+          <div style="font-size: 0.9rem; margin-bottom: 12px;">
+            Send exactly <strong id="instructAmount" style="color: var(--warning);">0.00</strong> USDC to the Anchor's address below:
+          </div>
+          
+          <label>Anchor Destination Account</label>
+          <div class="address-field" id="instructAccount">...</div>
+          
+          <label style="margin-top: 14px;">Memo Type</label>
+          <div style="font-size: 0.9rem; font-weight: 500;">TEXT</div>
+
+          <label style="margin-top: 8px;">Memo Value</label>
+          <div>
+            <span class="memo-badge" id="instructMemo">...</span>
+          </div>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 20px;">
+          Note: This page will signal the host window to prompt your wallet automatically. If no wallet pops up, send manually.
+        </p>
+
+        <button id="btnDone" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); box-shadow: none;">
+          Waiting for Wallet Transfer...
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const transactionId = urlParams.get('transaction_id');
+    const account = urlParams.get('account');
+    const amount = urlParams.get('amount');
+
+    document.getElementById('walletLabel').innerText = account ? `${account.substring(0, 8)}...${account.substring(account.length - 8)}` : 'Unknown';
+    if (amount) {
+      document.getElementById('withdrawAmount').value = amount;
+    }
+
+    document.getElementById('withdrawForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('btnSubmit');
+      const btnText = document.getElementById('btnText');
+      const loader = document.getElementById('submitLoader');
+
+      submitBtn.disabled = true;
+      btnText.style.display = 'none';
+      loader.style.display = 'block';
+
+      const data = {
+        transaction_id: transactionId,
+        account: account,
+        amount: document.getElementById('withdrawAmount').value,
+        fiat_method: document.getElementById('payoutType').value,
+        payout_details: document.getElementById('payoutDetails').value
+      };
+
+      try {
+        const response = await fetch('/api/complete-interactive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const resData = await response.json();
+
+        if (resData.success) {
+          document.getElementById('interactiveForm').style.display = 'none';
+          document.getElementById('instructionScreen').style.display = 'block';
+          document.getElementById('instructAmount').innerText = parseFloat(data.amount).toFixed(2);
+          document.getElementById('instructAccount').innerText = resData.withdraw_anchor_account;
+          document.getElementById('instructMemo').innerText = resData.withdraw_memo;
+
+          // Standard window.postMessage to signal parent frame to trigger wallet submission
+          const messageData = {
+            type: 'sep24:interactive_complete',
+            transaction: {
+              id: transactionId,
+              status: 'pending_user_transfer_start',
+              withdraw_anchor_account: resData.withdraw_anchor_account,
+              withdraw_memo: resData.withdraw_memo,
+              withdraw_memo_type: resData.withdraw_memo_type,
+              amount: data.amount
+            }
+          };
+          
+          if (window.opener) {
+            window.opener.postMessage(messageData, '*');
+          } else if (window.parent) {
+            window.parent.postMessage(messageData, '*');
+          }
+
+          console.log("Sent interactive complete postMessage to parent:", messageData);
+        } else {
+          alert(`Error: ${resData.error || 'Unknown error'}`);
+          submitBtn.disabled = false;
+          btnText.style.display = 'inline';
+          loader.style.display = 'none';
+        }
+      } catch (err) {
+        alert(`API Error: ${err.message}`);
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        loader.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
