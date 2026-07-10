@@ -82,8 +82,12 @@ impl RemitRouterContract {
 
         // Route savings portion to savings pool
         if save_amount > 0 {
+            // Transfer the tokens directly from the router to the savings pool contract
+            token_client.transfer(&env.current_contract_address(), &savings_pool_addr, &save_amount);
+
+            // Call deposit on the savings pool contract, passing the pool contract itself as the funding account
             let pool_client = SavingsPoolClient::new(&env, &savings_pool_addr);
-            pool_client.deposit(&env.current_contract_address(), &recipient, &save_amount);
+            pool_client.deposit(&savings_pool_addr, &recipient, &save_amount);
         }
 
         // Emit remittance sent event
