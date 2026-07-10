@@ -24,7 +24,7 @@ let anchorConfig = {
   issuerPublicKey: process.env.USDC_ASSET_ISSUER || '',
   distributorSecret: process.env.MOCK_ANCHOR_SIGNER_SECRET || '',
   distributorPublicKey: '',
-  assetCode: process.env.USDC_ASSET_CODE || 'USDC',
+  assetCode: process.env.USDC_ASSET_CODE || 'XLM',
   ready: false
 };
 
@@ -103,54 +103,57 @@ async function setupMockAnchorAsset() {
     fs.writeFileSync(envPath, updatedContent.trim() + '\n', 'utf8');
     console.log("Updated root .env with generated asset keys.");
 
-    // Check if trustline exists
-    const distAccount = await server.loadAccount(anchorConfig.distributorPublicKey);
-    const hasTrustline = distAccount.balances.some(
-      b => b.asset_code === anchorConfig.assetCode && b.asset_issuer === anchorConfig.issuerPublicKey
-    );
+    // Only perform classic trustline and token minting setups if asset is not native XLM
+    if (anchorConfig.assetCode !== 'XLM') {
+      // Check if trustline exists
+      const distAccount = await server.loadAccount(anchorConfig.distributorPublicKey);
+      const hasTrustline = distAccount.balances.some(
+        b => b.asset_code === anchorConfig.assetCode && b.asset_issuer === anchorConfig.issuerPublicKey
+      );
 
-    if (!hasTrustline) {
-      console.log("Creating trustline from Distributor to Issuer...");
-      const asset = new StellarSdk.Asset(anchorConfig.assetCode, anchorConfig.issuerPublicKey);
-      const tx = new StellarSdk.TransactionBuilder(distAccount, {
-        fee: StellarSdk.BASE_FEE,
-        networkPassphrase: StellarSdk.Networks.TESTNET
-      })
-        .addOperation(StellarSdk.Operation.changeTrust({ asset, limit: '1000000000' }))
-        .setTimeout(30)
-        .build();
+      if (!hasTrustline) {
+        console.log("Creating trustline from Distributor to Issuer...");
+        const asset = new StellarSdk.Asset(anchorConfig.assetCode, anchorConfig.issuerPublicKey);
+        const tx = new StellarSdk.TransactionBuilder(distAccount, {
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: StellarSdk.Networks.TESTNET
+        })
+          .addOperation(StellarSdk.Operation.changeTrust({ asset, limit: '1000000000' }))
+          .setTimeout(30)
+          .build();
 
-      tx.sign(distributorKeypair);
-      await server.submitTransaction(tx);
-      console.log("Trustline created successfully.");
-    }
+        tx.sign(distributorKeypair);
+        await server.submitTransaction(tx);
+        console.log("Trustline created successfully.");
+      }
 
-    // Check balance and mint if necessary
-    const updatedDistAccount = await server.loadAccount(anchorConfig.distributorPublicKey);
-    const mockBalance = updatedDistAccount.balances.find(
-      b => b.asset_code === anchorConfig.assetCode && b.asset_issuer === anchorConfig.issuerPublicKey
-    );
+      // Check balance and mint if necessary
+      const updatedDistAccount = await server.loadAccount(anchorConfig.distributorPublicKey);
+      const mockBalance = updatedDistAccount.balances.find(
+        b => b.asset_code === anchorConfig.assetCode && b.asset_issuer === anchorConfig.issuerPublicKey
+      );
 
-    const balanceValue = parseFloat(mockBalance ? mockBalance.balance : '0');
-    if (balanceValue < 100000) {
-      console.log("Minting mock USDC from Issuer to Distributor...");
-      const issuerAccount = await server.loadAccount(anchorConfig.issuerPublicKey);
-      const asset = new StellarSdk.Asset(anchorConfig.assetCode, anchorConfig.issuerPublicKey);
-      const tx = new StellarSdk.TransactionBuilder(issuerAccount, {
-        fee: StellarSdk.BASE_FEE,
-        networkPassphrase: StellarSdk.Networks.TESTNET
-      })
-        .addOperation(StellarSdk.Operation.payment({
-          destination: anchorConfig.distributorPublicKey,
-          asset,
-          amount: '500000'
-        }))
-        .setTimeout(30)
-        .build();
+      const balanceValue = parseFloat(mockBalance ? mockBalance.balance : '0');
+      if (balanceValue < 100000) {
+        console.log("Minting mock USDC from Issuer to Distributor...");
+        const issuerAccount = await server.loadAccount(anchorConfig.issuerPublicKey);
+        const asset = new StellarSdk.Asset(anchorConfig.assetCode, anchorConfig.issuerPublicKey);
+        const tx = new StellarSdk.TransactionBuilder(issuerAccount, {
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: StellarSdk.Networks.TESTNET
+        })
+          .addOperation(StellarSdk.Operation.payment({
+            destination: anchorConfig.distributorPublicKey,
+            asset,
+            amount: '500000'
+          }))
+          .setTimeout(30)
+          .build();
 
-      tx.sign(issuerKeypair);
-      await server.submitTransaction(tx);
-      console.log("Minted 500,000 mock USDC to Distributor.");
+        tx.sign(issuerKeypair);
+        await server.submitTransaction(tx);
+        console.log("Minted 500,000 mock USDC to Distributor.");
+      }
     }
 
     anchorConfig.ready = true;
@@ -299,7 +302,9 @@ app.post('/api/complete-interactive', async (req, res) => {
       // Perform on-chain payment transfer from anchor distributor to user's wallet
       console.log(`Processing anchor deposit: sending ${amount} ${tx.asset_code} to ${account}...`);
       const distAccount = await server.loadAccount(anchorConfig.distributorPublicKey);
-      const asset = new StellarSdk.Asset(tx.asset_code, anchorConfig.issuerPublicKey);
+      const asset = tx.asset_code === 'XLM' 
+        ? StellarSdk.Asset.native() 
+        : new StellarSdk.Asset(tx.asset_code, anchorConfig.issuerPublicKey);
       
       const paymentTx = new StellarSdk.TransactionBuilder(distAccount, {
         fee: StellarSdk.BASE_FEE,

@@ -212,22 +212,11 @@ async function deploy() {
   
   console.log(`Using Anchor Distributor as deployer: ${distributorKeypair.publicKey()}`);
   
-  // Derive SAC token contract address for mock USDC
-  const usdcAssetCode = process.env.USDC_ASSET_CODE || 'USDC';
-  const usdcAssetIssuer = keys.issuerPublicKey;
-  const usdcSacId = getSacContractId(usdcAssetCode, usdcAssetIssuer);
-  console.log(`USDC SAC Token Contract ID: ${usdcSacId}`);
-  
-  // Deploy SAC for mock USDC if not already done
-  try {
-    console.log(`Attempting to deploy Stellar Asset Contract (SAC) for mock USDC...`);
-    const asset = new StellarSdk.Asset(usdcAssetCode, usdcAssetIssuer);
-    const op = StellarSdk.Operation.createStellarAssetContract({ asset });
-    await submitSorobanTransaction(distributorKeypair, op);
-    console.log(`SAC deployed successfully.`);
-  } catch (error) {
-    console.log(`SAC deployment skipped (probably already deployed):`, error.message);
-  }
+  // Derive SAC token contract address (Native XLM)
+  const usdcAssetCode = process.env.USDC_ASSET_CODE || 'XLM';
+  const nativeAsset = StellarSdk.Asset.native();
+  const usdcSacId = nativeAsset.contractId(networkPassphrase);
+  console.log(`Native XLM SAC Token Contract ID: ${usdcSacId}`);
   
   // Upload and deploy savings_pool
   const savingsWasmPath = path.resolve(__dirname, '../target/wasm32-unknown-unknown/release/savings_pool.wasm');
@@ -257,14 +246,14 @@ async function deploy() {
   ];
   await callContractMethod(distributorKeypair, routerContractId, 'initialize', routerArgs);
   
-  // 5. Fund the pool contract with some USDC reserve tokens to pay interest yield
-  console.log("Funding Savings Pool contract with 10,000 USDC yield reserve...");
-  // Transfer 10,000 USDC from Distributor to Savings Pool Contract
-  // Note: USDC has 7 decimals on Stellar
+  // 5. Fund the pool contract with some XLM reserve tokens to pay interest yield
+  console.log("Funding Savings Pool contract with 100 XLM yield reserve...");
+  // Transfer 100 XLM from Distributor to Savings Pool Contract
+  // Note: XLM has 7 decimals on Stellar
   const fundArgs = [
     new StellarSdk.Address(distributorKeypair.publicKey()).toScVal(),
     new StellarSdk.Address(savingsContractId).toScVal(),
-    StellarSdk.nativeToScVal(BigInt(10000 * 10000000), { type: 'i128' }) 
+    StellarSdk.nativeToScVal(BigInt(100 * 10000000), { type: 'i128' }) 
   ];
   await callContractMethod(distributorKeypair, usdcSacId, 'transfer', fundArgs);
   console.log("Savings Pool yield reserve funded!");

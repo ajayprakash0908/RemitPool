@@ -38,7 +38,7 @@ if (SENTRY_DSN) {
 
 // Standalone Performance-Optimized Live Yield Counter Component
 // Isolates 60 FPS animation updates to prevent main App re-renders
-const LiveYieldCounter = React.memo(({ dashboardSavingsValue, dashboardFetchTime, yieldRateSec }) => {
+const LiveYieldCounter = React.memo(({ dashboardSavingsValue, dashboardFetchTime, yieldRateSec, assetCode }) => {
   const [liveSavingsVal, setLiveSavingsVal] = useState(0);
 
   useEffect(() => {
@@ -75,7 +75,7 @@ const LiveYieldCounter = React.memo(({ dashboardSavingsValue, dashboardFetchTime
     <div className="balance-value-live">
       {liveBal.integer}
       <span className="decimals">{liveBal.decimals}</span>
-      <span className="currency">USDC</span>
+      <span className="currency">{assetCode || 'USDC'}</span>
     </div>
   );
 });
@@ -259,16 +259,21 @@ function App() {
       setXlmBalance(nativeBal ? parseFloat(nativeBal.balance).toFixed(7) : '0.0000000');
       
       // Get mock USDC balance and trustline state
-      const usdcAsset = account.balances.find(
-        (b) => b.asset_code === config.asset_code && b.asset_issuer === config.asset_issuer
-      );
-      
-      if (usdcAsset) {
-        setUsdcBalance(parseFloat(usdcAsset.balance).toFixed(7));
+      if (config.asset_code === 'XLM') {
+        setUsdcBalance(nativeBal ? parseFloat(nativeBal.balance).toFixed(7) : '0.0000000');
         setHasTrustline(true);
       } else {
-        setUsdcBalance('0.0000000');
-        setHasTrustline(false);
+        const usdcAsset = account.balances.find(
+          (b) => b.asset_code === config.asset_code && b.asset_issuer === config.asset_issuer
+        );
+        
+        if (usdcAsset) {
+          setUsdcBalance(parseFloat(usdcAsset.balance).toFixed(7));
+          setHasTrustline(true);
+        } else {
+          setUsdcBalance('0.0000000');
+          setHasTrustline(false);
+        }
       }
     } catch (err) {
       console.error("Horizon balance fetch error:", err);
@@ -344,13 +349,18 @@ function App() {
       // Record time of successful fetch
       setDashboardFetchTime(Date.now() / 1000);
       
-      // Fetch recipient's Horizon USDC balance
+      // Fetch recipient's Horizon USDC/XLM balance
       try {
         const account = await horizonServer.loadAccount(ownerAddress);
-        const usdcAsset = account.balances.find(
-          (b) => b.asset_code === config.asset_code && b.asset_issuer === config.asset_issuer
-        );
-        setDashboardUsdc(usdcAsset ? parseFloat(usdcAsset.balance).toFixed(7) : '0.0000000');
+        if (config.asset_code === 'XLM') {
+          const nativeBal = account.balances.find((b) => b.asset_type === 'native');
+          setDashboardUsdc(nativeBal ? parseFloat(nativeBal.balance).toFixed(7) : '0.0000000');
+        } else {
+          const usdcAsset = account.balances.find(
+            (b) => b.asset_code === config.asset_code && b.asset_issuer === config.asset_issuer
+          );
+          setDashboardUsdc(usdcAsset ? parseFloat(usdcAsset.balance).toFixed(7) : '0.0000000');
+        }
       } catch {
         setDashboardUsdc('0.0000000');
       }
@@ -1049,7 +1059,7 @@ function App() {
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label" htmlFor="amount">USDC Send Amount</label>
+                      <label className="form-label" htmlFor="amount">{config ? config.asset_code : 'USDC'} Send Amount</label>
                       <div className="input-wrapper">
                         <DollarSign className="input-icon" size={18} />
                         <input
@@ -1059,14 +1069,14 @@ function App() {
                           step="0.00001"
                           min="0.00001"
                           max={usdcBalance}
-                          placeholder="Amount in USDC"
+                          placeholder={`Amount in ${config ? config.asset_code : 'USDC'}`}
                           value={sendAmount}
                           onChange={(e) => setSendAmount(e.target.value)}
                           required
                         />
                       </div>
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '6px', textAlign: 'right' }}>
-                        Balance: {usdcBalance} USDC
+                        Balance: {usdcBalance} {config ? config.asset_code : 'USDC'}
                       </span>
                     </div>
 
@@ -1097,13 +1107,13 @@ function App() {
                         <div className="split-card direct">
                           <div className="split-label">Direct to Recipient Wallet ({100 - splitPercent}%)</div>
                           <div className="split-amount">
-                            {(parseFloat(sendAmount) * (1 - splitPercent / 100)).toFixed(4)} USDC
+                            {(parseFloat(sendAmount) * (1 - splitPercent / 100)).toFixed(4)} {config ? config.asset_code : 'USDC'}
                           </div>
                         </div>
                         <div className="split-card savings">
                           <div className="split-label">Yield Savings Pool ({splitPercent}%)</div>
                           <div className="split-amount">
-                            {(parseFloat(sendAmount) * (splitPercent / 100)).toFixed(4)} USDC
+                            {(parseFloat(sendAmount) * (splitPercent / 100)).toFixed(4)} {config ? config.asset_code : 'USDC'}
                           </div>
                         </div>
                       </div>
@@ -1174,6 +1184,7 @@ function App() {
                       dashboardSavingsValue={dashboardSavingsValue} 
                       dashboardFetchTime={dashboardFetchTime} 
                       yieldRateSec={yieldRateSec} 
+                      assetCode={config ? config.asset_code : 'USDC'}
                     />
 
                     <div className="yield-stats">
@@ -1190,13 +1201,13 @@ function App() {
                     <div className="split-card">
                       <div className="split-label">Wallet Balance</div>
                       <div className="split-amount" style={{ color: 'white' }}>
-                        {parseFloat(dashboardUsdc).toFixed(4)} USDC
+                        {parseFloat(dashboardUsdc).toFixed(4)} {config ? config.asset_code : 'USDC'}
                       </div>
                     </div>
                     <div className="split-card">
                       <div className="split-label">Total Savings + Wallet</div>
                       <div className="split-amount" style={{ color: 'var(--success)' }}>
-                        {(parseFloat(dashboardUsdc) + parseFloat(dashboardSavingsValue)).toFixed(4)} USDC
+                        {(parseFloat(dashboardUsdc) + parseFloat(dashboardSavingsValue)).toFixed(4)} {config ? config.asset_code : 'USDC'}
                       </div>
                     </div>
                   </div>
@@ -1205,7 +1216,7 @@ function App() {
                   {publicKey === dashboardAddress && parseFloat(dashboardShares) > 0 ? (
                     <form onSubmit={handleWithdrawSavings} style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '24px' }}>
                       <div className="form-group">
-                        <label className="form-label" htmlFor="withdraw">Withdraw USDC from Savings Pool</label>
+                        <label className="form-label" htmlFor="withdraw">Withdraw {config ? config.asset_code : 'USDC'} from Savings Pool</label>
                         <div className="input-wrapper">
                           <DollarSign className="input-icon" size={18} />
                           <input
@@ -1215,14 +1226,14 @@ function App() {
                             step="0.00001"
                             min="0.00001"
                             max={dashboardSavingsValue}
-                            placeholder="USDC to pull"
+                            placeholder={`${config ? config.asset_code : 'USDC'} to pull`}
                             value={withdrawAmount}
                             onChange={(e) => setWithdrawAmount(e.target.value)}
                             required
                           />
                         </div>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '6px', textAlign: 'right' }}>
-                          Max withdrawable: {parseFloat(dashboardSavingsValue).toFixed(7)} USDC
+                          Max withdrawable: {parseFloat(dashboardSavingsValue).toFixed(7)} {config ? config.asset_code : 'USDC'}
                         </span>
                       </div>
 
