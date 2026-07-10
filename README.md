@@ -188,7 +188,7 @@ Below are verified transactions on the Stellar Testnet:
 *Mobile layout stacking on 375px screens with 44px tap targets.*
 
 ### 3. Analytics & Telemetry Dashboard
-![Sentry and Telemetry Monitoring Setup](<FILL_IN: absolute path to monitoring screenshot>)
+![Sentry and Telemetry Monitoring Setup](image-2.png)
 *Admin metrics dashboard displaying wallets connected, success rates, and live feedback logs.*
 
 ---
