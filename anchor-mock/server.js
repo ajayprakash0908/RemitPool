@@ -378,18 +378,68 @@ app.get('/api/friendbot', async (req, res) => {
   if (!addr) {
     return res.status(400).json({ error: "Address query parameter is required" });
   }
+  
   try {
     console.log(`[Friendbot Proxy] Requesting funding for ${addr}...`);
-    const response = await fetch(`https://friendbot.stellar.org?addr=${addr}`);
+    // Attempt standard Friendbot request with 10s timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(`https://friendbot.stellar.org?addr=${addr}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `Friendbot responded with status ${response.status}`);
+      throw new Error(`Friendbot returned error ${response.status}`);
     }
     const data = await response.json();
-    res.json({ success: true, details: data });
+    console.log(`[Friendbot Proxy] Friendbot funded ${addr} successfully.`);
+    return res.json({ success: true, details: data });
   } catch (error) {
-    console.error(`[Friendbot Proxy Error]`, error);
-    res.status(500).json({ error: error.message });
+    console.warn(`[Friendbot Proxy] Standard Friendbot failed (${error.message}). Falling back to local distributor faucet...`);
+    
+    // Fallback: fund account from anchor distributor account
+    try {
+      const server = new StellarSdk.Horizon.Server("https://horizon-testnet.stellar.org");
+      const distributorSecret = process.env.MOCK_ANCHOR_SIGNER_SECRET;
+      const distributorKP = StellarSdk.Keypair.fromSecret(distributorSecret);
+      
+      const distributor = await server.loadAccount(distributorKP.publicKey());
+      
+      let txBuilder = new StellarSdk.TransactionBuilder(distributor, {
+        fee: '200',
+        networkPassphrase: StellarSdk.Networks.TESTNET
+      });
+      
+      let accountExists = true;
+      try {
+        await server.loadAccount(addr);
+      } catch (err) {
+        accountExists = false;
+      }
+      
+      if (!accountExists) {
+        txBuilder.addOperation(StellarSdk.Operation.createAccount({
+          destination: addr,
+          startingBalance: '30' // 30 XLM to activate and cover trustline reserves
+        }));
+      } else {
+        txBuilder.addOperation(StellarSdk.Operation.payment({
+          destination: addr,
+          asset: StellarSdk.Asset.native(),
+          amount: '30'
+        }));
+      }
+      
+      const tx = txBuilder.setTimeout(30).build();
+      tx.sign(distributorKP);
+      const result = await server.submitTransaction(tx);
+      console.log(`[Friendbot Proxy Fallback] Successfully funded ${addr} with 30 XLM. Hash: ${result.hash}`);
+      
+      return res.json({ success: true, fallback: true, hash: result.hash });
+    } catch (fallbackError) {
+      console.error(`[Friendbot Proxy Fallback Error]`, fallbackError);
+      return res.status(500).json({ error: `Friendbot down and distributor faucet failed: ${fallbackError.message}` });
+    }
   }
 });
 
