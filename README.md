@@ -172,7 +172,7 @@ Below are verified transactions on the Stellar Testnet:
 
 ## Live Demo
 
-* **Live Demo URL**: `<FILL_IN: Production Vercel or Netlify URL>`
+* **Live Demo URL**: [Live Vercel Deployment](https://vercel.com/ajay80537/remit-pool)
 * *Note: This application is a Testnet MVP. Real financial assets are not supported. Senders and recipients must configure accounts on the Stellar Testnet.*
 
 ---
