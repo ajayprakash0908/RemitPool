@@ -408,13 +408,31 @@ function App() {
         throw new Error("Freighter transaction signature was rejected or returned empty. Please ensure your Freighter extension is unlocked and set to the Test Network.");
       }
       
-      let envelopeXdr = signedXdr;
-      if (typeof signedXdr === 'object') {
-        envelopeXdr = signedXdr.xdr || signedXdr.signedTx || signedXdr.transactionEnvelope || signedXdr.envelope;
+      let envelopeXdr = null;
+      if (typeof signedXdr === 'string') {
+        envelopeXdr = signedXdr;
+      } else if (typeof signedXdr === 'object') {
+        envelopeXdr = signedXdr.xdr || 
+                      signedXdr.signedTransaction || 
+                      signedXdr.signedTx || 
+                      signedXdr.transactionEnvelope || 
+                      signedXdr.envelope || 
+                      signedXdr.result || 
+                      signedXdr.tx;
+        
+        // Deep search for any long base64 string
+        if (!envelopeXdr) {
+          for (const key of Object.keys(signedXdr)) {
+            if (typeof signedXdr[key] === 'string' && signedXdr[key].length > 40) {
+              envelopeXdr = signedXdr[key];
+              break;
+            }
+          }
+        }
       }
       
       if (!envelopeXdr) {
-        throw new Error("Could not extract signed XDR from Freighter response.");
+        throw new Error(`Could not extract signed XDR from Freighter response: ${JSON.stringify(signedXdr)}`);
       }
       
       tx = StellarSdk.TransactionBuilder.fromXDR(envelopeXdr, networkPassphrase);
@@ -596,13 +614,31 @@ function App() {
         throw new Error("Freighter transaction signature was rejected or returned empty. Please ensure your Freighter extension is unlocked and set to the Test Network.");
       }
       
-      let envelopeXdr = signedXdr;
-      if (typeof signedXdr === 'object') {
-        envelopeXdr = signedXdr.xdr || signedXdr.signedTx || signedXdr.transactionEnvelope || signedXdr.envelope;
+      let envelopeXdr = null;
+      if (typeof signedXdr === 'string') {
+        envelopeXdr = signedXdr;
+      } else if (typeof signedXdr === 'object') {
+        envelopeXdr = signedXdr.xdr || 
+                      signedXdr.signedTransaction || 
+                      signedXdr.signedTx || 
+                      signedXdr.transactionEnvelope || 
+                      signedXdr.envelope || 
+                      signedXdr.result || 
+                      signedXdr.tx;
+        
+        // Deep search for any long base64 string
+        if (!envelopeXdr) {
+          for (const key of Object.keys(signedXdr)) {
+            if (typeof signedXdr[key] === 'string' && signedXdr[key].length > 40) {
+              envelopeXdr = signedXdr[key];
+              break;
+            }
+          }
+        }
       }
       
       if (!envelopeXdr) {
-        throw new Error("Could not extract signed XDR from Freighter response.");
+        throw new Error(`Could not extract signed XDR from Freighter response: ${JSON.stringify(signedXdr)}`);
       }
       
       showToast("Submitting trustline to ledger...", "info");
