@@ -403,7 +403,13 @@ function App() {
         network: networkPassphrase === StellarSdk.Networks.PUBLIC ? 'PUBLIC' : 'TESTNET',
         networkPassphrase: networkPassphrase
       });
-      tx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+      
+      let envelopeXdr = signedXdr;
+      if (signedXdr && typeof signedXdr === 'object') {
+        envelopeXdr = signedXdr.xdr || signedXdr.signedTx || signedXdr.transactionEnvelope || signedXdr.envelope;
+      }
+      
+      tx = StellarSdk.TransactionBuilder.fromXDR(envelopeXdr, networkPassphrase);
     }
     
     // 3. Submit transaction
@@ -578,8 +584,13 @@ function App() {
         networkPassphrase: networkPassphrase
       });
       
+      let envelopeXdr = signedXdr;
+      if (signedXdr && typeof signedXdr === 'object') {
+        envelopeXdr = signedXdr.xdr || signedXdr.signedTx || signedXdr.transactionEnvelope || signedXdr.envelope;
+      }
+      
       showToast("Submitting trustline to ledger...", "info");
-      const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+      const signedTx = StellarSdk.TransactionBuilder.fromXDR(envelopeXdr, networkPassphrase);
       const result = await server.submitTransaction(signedTx);
       showToast("USDC Trustline established!", "success");
       trackEvent('trustline_created', { wallet_type: 'freighter', address: publicKey, hash: result.hash });
