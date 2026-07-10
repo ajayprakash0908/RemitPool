@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="RemitPool — A secure cross-border remittance and micro-savings dApp built on Stellar using Soroban smart contracts and interactive SEP-24 anchors." />
+    <title>RemitPool — Cross-Border Remittance & Savings dApp</title>
+  </head>
+  <body>
+    <div id="error-boundary-fallback" style="display: none; padding: 30px; background: #2a0808; color: #ff8888; font-family: monospace; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; box-sizing: border-box; overflow: auto;">
+      <h1 style="color: #ff3333; margin-top: 0; border-bottom: 2px solid #ff3333; padding-bottom: 10px;">Browser Runtime Error</h1>
+      <p style="font-weight: bold; font-size: 16px;">The React application encountered a runtime error during initialization:</p>
+      <pre id="error-message" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 8px; border: 1px solid #ff3333; font-size: 14px; white-space: pre-wrap; word-break: break-all;"></pre>
+      <p style="color: #888; margin-top: 20px;">Please take a screenshot of this error message so we can resolve it.</p>
+    </div>
+    <script>
+      window.addEventListener('error', function(event) {
+        var fallback = document.getElementById('error-boundary-fallback');
+        var msg = document.getElementById('error-message');
+        if (fallback && msg) {
+          fallback.style.display = 'block';
+          msg.textContent = event.error ? (event.error.stack || event.error.message) : event.message;
+        }
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        var fallback = document.getElementById('error-boundary-fallback');
+        var msg = document.getElementById('error-message');
+        if (fallback && msg) {
+          fallback.style.display = 'block';
+          msg.textContent = 'Unhandled Promise Rejection: ' + (event.reason ? (event.reason.stack || event.reason.message || event.reason) : 'Unknown reason');
+        }
+      });
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
