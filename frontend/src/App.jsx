@@ -579,7 +579,8 @@ function App() {
       });
       
       showToast("Submitting trustline to ledger...", "info");
-      const result = await server.submitTransaction(new StellarSdk.Transaction(signedXdr, networkPassphrase));
+      const signedTx = StellarSdk.TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+      const result = await server.submitTransaction(signedTx);
       showToast("USDC Trustline established!", "success");
       trackEvent('trustline_created', { wallet_type: 'freighter', address: publicKey, hash: result.hash });
       setHasTrustline(true);
