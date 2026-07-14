@@ -1,0 +1,63 @@
+name: Deploy Contracts to Testnet
+on:
+  workflow_dispatch:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  deploy:
+    name: Deploy to Testnet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.81.0
+          targets: wasm32-unknown-unknown
+      - name: Cache cargo registry and binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ runner.os }}-cargo-deploy-${{ hashFiles('**/Cargo.lock') }}
+      # Installs cargo-binstall instantly
+      - name: Install cargo-binstall
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      # Installs stellar-cli in 3 seconds using the precompiled binary
+      - name: Install Stellar CLI
+        run: cargo binstall --no-confirm stellar-cli
+      # Build standard wasm and optimize it
+      - name: Build contracts
+        run: |
+          cargo build --target wasm32-unknown-unknown --release
+          stellar contract optimize --wasm target/wasm32-unknown-unknown/release/savings_pool.wasm
+          stellar contract optimize --wasm target/wasm32-unknown-unknown/release/remit_router.wasm
+      # Deploy the optimized contracts
+      - name: Deploy to Testnet
+        run: |
+          echo "Generating identities..."
+          stellar keys generate deployer --network testnet
+          stellar keys fund deployer --network testnet
+          
+          echo "Deploying Savings Pool Contract..."
+          SAVINGS_POOL_ID=$(stellar contract deploy \
+            --wasm target/wasm32-unknown-unknown/release/savings_pool.optimized.wasm \
+            --source deployer \
+            --network testnet 2>deploy_err_pool.log) || { cat deploy_err_pool.log; exit 1; }
+          echo "Savings Pool contract deployed at: $SAVINGS_POOL_ID"
+          
+          echo "Deploying Remit Router Contract..."
+          REMIT_ROUTER_ID=$(stellar contract deploy \
+            --wasm target/wasm32-unknown-unknown/release/remit_router.optimized.wasm \
+            --source deployer \
+            --network testnet 2>deploy_err_router.log) || { cat deploy_err_router.log; exit 1; }
+          echo "Remit Router contract deployed at: $REMIT_ROUTER_ID"
+          
+          echo "Fetching Test Token (Native XLM asset) ID..."
+          TOKEN_ID=$(stellar contract id asset --asset native --network testnet)
+          echo "Native Token ID is: $TOKEN_ID"
