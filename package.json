@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "anchor": "npm.cmd --prefix anchor-mock run dev",
+    "frontend": "npm.cmd --prefix frontend run dev",
+    "deploy": "node anchor-mock/deploy.js"
+  },
   "dependencies": {
     "dotenv": "^17.4.2",
     "stellar-sdk": "^13.3.0"
